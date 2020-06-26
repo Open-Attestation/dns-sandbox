@@ -5,7 +5,7 @@ const domain = process.env.DOMAIN;
 const waitTime = Number(process.env.WAIT_TIME);
 // reuse the state machine arn and replace stateMachine by execution
 // is there a better way ?
-const exeutionArnBasePath = process.env.STATE_MACHINE_ARN?.replace(":stateMachine:", ":execution:");
+const executionArnBasePath = process.env.STATE_MACHINE_ARN?.replace(":stateMachine:", ":execution:");
 
 interface GetNameEvent {
   pathParameters: { executionId: string };
@@ -36,7 +36,7 @@ export const getExecutionName = async (event: GetNameEvent): Promise<any> => {
   if (!event.pathParameters.executionId) throw new Error("Please provide an execution ARN");
   const run = async (): Promise<{ name: string; expiryDate: Date }> => {
     const data = await getExecutionHistory({
-      executionArn: `${exeutionArnBasePath}:${event.pathParameters.executionId}`,
+      executionArn: `${executionArnBasePath}:${event.pathParameters.executionId}`,
     });
     if (data.events) {
       const event = data.events.find(
