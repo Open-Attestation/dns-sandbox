@@ -62,7 +62,9 @@ const retrieveExecutionDetailsFromExecutionId = (executionId: string) => async (
   throw new Error("Unable to find the event");
 };
 
-export const getExecutionDetails = async (event: GetNameEvent): Promise<any> => {
+export const getExecutionDetails = async (
+  event: GetNameEvent
+): Promise<{ statusCode: number; headers: { [key: string]: any }; body?: string }> => {
   console.log(event);
   if (!event.pathParameters.executionId) throw new Error("Please provide an execution ARN");
 
