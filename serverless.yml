@@ -5,45 +5,59 @@ provider:
   stage: "${opt:stage, 'stg'}"
   region: "${opt:region, 'ap-southeast-1'}"
   memorySize: 256
+  environment:
+    DOMAIN: ${self:custom.DOMAIN}
+    HOSTED_ZONE_ID: ${self:custom.HOSTED_ZONE_ID}
+    RECORD_EXPIRY_TIME: ${self:custom.RECORD_EXPIRY_TIME}
   tracing:
     lambda: true
     apiGateway: true
-  logs:
-    restApi: true
+  # https://github.com/serverless/serverless/issues/6906
+  #  logs:
+  #    restApi: true
+  iamRoleStatements:
+    - Effect: Allow
+      Action: ["route53:ChangeResourceRecordSets"]
+      Resource:
+        - "Fn::Join": ["", ["arn:aws:route53:::hostedzone/", "${self:custom.HOSTED_ZONE_ID}"]]
+    - Effect: Allow
+      Action: ["states:GetExecutionHistory"]
+      Resource:
+        - "Fn::Join": ["", ["arn:aws:states:*:*:execution:DomainStateMachine*"]]
 
 functions:
-  status:
-    description: "I have no idea how to not put a definition yet"
-    handler: index.create
+  getExecutionDetails:
+    description: "Get the execution details of a step machine. Details include domain name created and expiry time"
+    handler: index.getExecutionDetails
+    environment:
+      STATE_MACHINE_ARN: { "Ref": "DomainStateMachine" }
+    events:
+      - http:
+          path: /execution/{executionId}
+          method: GET
   create:
-    description: "Checks the validity of the certificate against the 4 checks."
+    description: "Create a DNS-TXT record."
     handler: index.create
   clean:
-    description: "Checks the validity of the certificate against the 4 checks."
+    description: "Delete a DNS-TXT record."
     handler: index.clean
 
 stepFunctions:
   stateMachines:
-    status:
-      events:
-        - http:
-            path: status
-            method: POST
-            action: DescribeExecution
-      definition:
-        Comment: "An example of the Amazon States Language using wait states"
-        StartAt: FirstState
-        States:
-          FirstState:
-            Type: Task
-            Resource:
-              Fn::GetAtt: [status, Arn]
-            End: true
     records:
+      id: DomainStateMachine
       events:
         - http:
             path: /
             method: POST
+            response:
+              headers:
+                Content-Type: "'application/json'"
+              template:
+                application/json: |
+                  {
+                    "executionId": "$input.json('$.executionArn').split(':')[7].replace('"', "")"
+                  }
       definition:
         Comment: "An example of the Amazon States Language using wait states"
         StartAt: CreateRecord
@@ -55,13 +69,18 @@ stepFunctions:
             Next: Wait
           Wait:
             Type: Wait
-            Seconds: 3600
+            Seconds: ${self:custom.RECORD_EXPIRY_TIME}
             Next: DeleteRecord
           DeleteRecord:
             Type: Task
             Resource:
               Fn::GetAtt: [clean, Arn]
             End: true
+custom:
+  DOMAIN: ${env:DOMAIN}
+  HOSTED_ZONE_ID: ${env:HOSTED_ZONE_ID}
+  # change to seven days later 604800
+  RECORD_EXPIRY_TIME: ${env:RECORD_EXPIRY_TIME, 3600}
 
 plugins:
   - serverless-step-functions
