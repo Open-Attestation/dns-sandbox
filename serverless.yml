@@ -8,7 +8,7 @@ provider:
   environment:
     DOMAIN: ${self:custom.DOMAIN}
     HOSTED_ZONE_ID: ${self:custom.HOSTED_ZONE_ID}
-    WAIT_TIME: ${self:custom.WAIT_TIME}
+    RECORD_EXPIRY_TIME: ${self:custom.RECORD_EXPIRY_TIME}
   tracing:
     lambda: true
     apiGateway: true
@@ -26,9 +26,9 @@ provider:
         - "Fn::Join": ["", ["arn:aws:states:*:*:execution:DomainStateMachine*"]]
 
 functions:
-  getExecutionName:
-    description: "Get the domain name associated with the execution of a step machine."
-    handler: index.getExecutionName
+  getExecutionDetails:
+    description: "Get the execution details of a step machine. Details include domain name created and expiry time"
+    handler: index.getExecutionDetails
     environment:
       STATE_MACHINE_ARN: { "Ref": "DomainStateMachine" }
     events:
@@ -69,7 +69,7 @@ stepFunctions:
             Next: Wait
           Wait:
             Type: Wait
-            Seconds: ${self:custom.WAIT_TIME}
+            Seconds: ${self:custom.RECORD_EXPIRY_TIME}
             Next: DeleteRecord
           DeleteRecord:
             Type: Task
@@ -80,7 +80,7 @@ custom:
   DOMAIN: ${env:DOMAIN}
   HOSTED_ZONE_ID: ${env:HOSTED_ZONE_ID}
   # change to seven days later 604800
-  WAIT_TIME: ${env:WAIT_TIME, 3600}
+  RECORD_EXPIRY_TIME: ${env:RECORD_EXPIRY_TIME, 3600}
 
 plugins:
   - serverless-step-functions
