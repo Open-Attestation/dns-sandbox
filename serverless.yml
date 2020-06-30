@@ -8,7 +8,7 @@ provider:
   environment:
     DOMAIN: ${self:custom.DOMAIN}
     HOSTED_ZONE_ID: ${self:custom.HOSTED_ZONE_ID}
-    RECORD_EXPIRY_TIME: ${self:custom.RECORD_EXPIRY_TIME}
+    RECORD_EXPIRY_TIME: ${self:custom.RECORD_EXPIRY_TIME.${self:provider.stage}, self:custom.RECORD_EXPIRY_TIME.default}
   tracing:
     lambda: true
     apiGateway: true
@@ -69,7 +69,7 @@ stepFunctions:
             Next: Wait
           Wait:
             Type: Wait
-            Seconds: ${self:custom.RECORD_EXPIRY_TIME}
+            Seconds: ${self:custom.RECORD_EXPIRY_TIME.${self:provider.stage}, self:custom.RECORD_EXPIRY_TIME.default}
             Next: DeleteRecord
           DeleteRecord:
             Type: Task
@@ -77,10 +77,14 @@ stepFunctions:
               Fn::GetAtt: [clean, Arn]
             End: true
 custom:
+  # https://github.com/serverless/serverless/issues/5534
+  # change to seven days later 604800
+  RECORD_EXPIRY_TIME:
+    stg: 3600
+    prod: 86400
+    default: 3600
   DOMAIN: ${env:DOMAIN}
   HOSTED_ZONE_ID: ${env:HOSTED_ZONE_ID}
-  # change to seven days later 604800
-  RECORD_EXPIRY_TIME: ${env:RECORD_EXPIRY_TIME, 3600}
 
 plugins:
   - serverless-step-functions
