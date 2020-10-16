@@ -10,7 +10,7 @@
     "unique-names-generator": "^4.2.0"
   },
   "devDependencies": {
-    "@govtechsg/dnsprove": "^2.0.6",
+    "@govtechsg/dnsprove": "^2.1.1",
     "@types/aws-lambda": "^8.10.56",
     "@types/jest": "^26.0.3",
     "@types/node-fetch": "^2.5.7",
